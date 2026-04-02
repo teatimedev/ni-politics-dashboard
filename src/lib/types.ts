@@ -51,6 +51,18 @@ export interface MemberVote {
   designation: string | null;
 }
 
+export interface HansardContribution {
+  id: string;
+  person_id: string;
+  date: string;
+  debate_title: string | null;
+  content: string | null;
+  sentiment_score: number | null;
+  plenary_id: string | null;
+  component_id: string | null;
+  created_at: string;
+}
+
 export interface SyncLogEntry {
   id: string;
   source: string;

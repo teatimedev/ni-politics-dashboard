@@ -101,3 +101,33 @@ export interface NiAssemblyMemberVotingResponse {
     Member: NiAssemblyMemberVote[];
   };
 }
+
+export interface NiAssemblyHansardReport {
+  ReportDocId: string;
+  PlenaryDate: string;
+  PlenarySessionId: string;
+  PlenarySessionName: string;
+}
+
+export interface NiAssemblyHansardReportsResponse {
+  AllHansardComponentsList: {
+    HansardComponent: NiAssemblyHansardReport[];
+  };
+}
+
+export interface NiAssemblyHansardComponent {
+  ComponentId: string;
+  ComponentText: string;
+  ComponentTypeId: string;
+  ComponentType: string;
+  ComponentHeaderId: string | null;
+  ComponentHeader: string | null;
+  ParentComponentId: string | null;
+  RelatedItemId: string | null;
+}
+
+export interface NiAssemblyHansardComponentsResponse {
+  AllHansardComponentsList: {
+    HansardComponent: NiAssemblyHansardComponent[];
+  };
+}

@@ -4,6 +4,8 @@ import type {
   NiAssemblyDivisionsResponse,
   NiAssemblyDivisionResultResponse,
   NiAssemblyMemberVotingResponse,
+  NiAssemblyHansardReportsResponse,
+  NiAssemblyHansardComponentsResponse,
 } from "./types";
 
 const BASE_URL = "https://data.niassembly.gov.uk";
@@ -60,5 +62,19 @@ export async function getDivisionMemberVoting(
 ): Promise<NiAssemblyMemberVotingResponse> {
   return fetchJson<NiAssemblyMemberVotingResponse>(
     `/plenary_json.ashx?m=GetDivisionMemberVoting&documentId=${documentId}`
+  );
+}
+
+export async function getAllHansardReports(): Promise<NiAssemblyHansardReportsResponse> {
+  return fetchJson<NiAssemblyHansardReportsResponse>(
+    "/hansard.asmx/GetAllHansardReports_JSON"
+  );
+}
+
+export async function getHansardComponentsByPlenaryDate(
+  plenaryDate: string
+): Promise<NiAssemblyHansardComponentsResponse> {
+  return fetchJson<NiAssemblyHansardComponentsResponse>(
+    `/hansard.asmx/GetHansardComponentsByPlenaryDate_JSON?plenaryDate=${plenaryDate}`
   );
 }
