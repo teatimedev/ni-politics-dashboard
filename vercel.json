@@ -7,6 +7,10 @@
     {
       "path": "/api/sync/divisions",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/sync/hansard",
+      "schedule": "0 7 * * *"
     }
   ]
 }

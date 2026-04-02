@@ -7,7 +7,8 @@ import {
   getPartyShortName,
 } from "@/lib/party-colours";
 import { VotingRecordTab } from "@/components/voting-record-tab";
-import type { Member, MemberRole } from "@/lib/types";
+import { HansardContributionCard } from "@/components/hansard-contribution-card";
+import type { Member, MemberRole, HansardContribution } from "@/lib/types";
 
 interface PageProps {
   params: Promise<{ personId: string }>;
@@ -31,6 +32,14 @@ export default async function MlaProfilePage({ params }: PageProps) {
     .eq("person_id", personId)
     .order("start_date", { ascending: false });
 
+  // Fetch Hansard contributions
+  const { data: hansardData } = await supabase
+    .from("hansard_contributions")
+    .select("*")
+    .eq("person_id", personId)
+    .order("date", { ascending: false })
+    .limit(50);
+
   // Fetch voting record with division details
   const { data: votes } = await supabase
     .from("member_votes")
@@ -42,6 +51,14 @@ export default async function MlaProfilePage({ params }: PageProps) {
 
   const mla = member as Member;
   const mlaRoles = (roles ?? []) as MemberRole[];
+  const hansardContributions = (hansardData ?? []) as HansardContribution[];
+
+  const memberInfo = {
+    person_id: mla.person_id,
+    name: mla.name,
+    party: mla.party,
+    photo_url: mla.photo_url,
+  };
 
   // Group roles by type
   const rolesByType = mlaRoles.reduce(
@@ -120,8 +137,8 @@ export default async function MlaProfilePage({ params }: PageProps) {
           <TabsTrigger value="voting">
             Voting Record ({(votes ?? []).length})
           </TabsTrigger>
-          <TabsTrigger value="hansard" disabled>
-            Hansard
+          <TabsTrigger value="hansard">
+            Hansard ({hansardContributions.length})
           </TabsTrigger>
           <TabsTrigger value="interests" disabled>
             Interests
@@ -141,10 +158,23 @@ export default async function MlaProfilePage({ params }: PageProps) {
           <VotingRecordTab votes={(votes as any) ?? []} />
         </TabsContent>
 
-        <TabsContent value="hansard">
-          <p className="py-8 text-center text-muted-foreground">
-            Coming in Phase 3.
-          </p>
+        <TabsContent value="hansard" className="mt-4">
+          {hansardContributions.length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">
+              No Hansard contributions found for this MLA.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {hansardContributions.map((c) => (
+                <HansardContributionCard
+                  key={c.id}
+                  contribution={c}
+                  member={memberInfo}
+                  showDebateTitle
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="interests">
