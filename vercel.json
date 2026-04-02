@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/sync/divisions",
-      "schedule": "0 */6 * * *"
+      "schedule": "0 10 * * *"
     },
     {
       "path": "/api/sync/hansard",
@@ -26,7 +26,7 @@
     },
     {
       "path": "/api/sync/news",
-      "schedule": "0 * * * *"
+      "schedule": "0 11 * * *"
     }
   ]
 }
