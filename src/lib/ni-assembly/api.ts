@@ -1,6 +1,9 @@
 import type {
   NiAssemblyMembersResponse,
   NiAssemblyRolesResponse,
+  NiAssemblyDivisionsResponse,
+  NiAssemblyDivisionResultResponse,
+  NiAssemblyMemberVotingResponse,
 } from "./types";
 
 const BASE_URL = "https://data.niassembly.gov.uk";
@@ -32,5 +35,30 @@ export async function getAllMembers(): Promise<NiAssemblyMembersResponse> {
 export async function getAllMemberRoles(): Promise<NiAssemblyRolesResponse> {
   return fetchJson<NiAssemblyRolesResponse>(
     "/members_json.ashx?m=GetAllMemberRoles"
+  );
+}
+
+export async function getDivisions(
+  startDate: string,
+  endDate: string
+): Promise<NiAssemblyDivisionsResponse> {
+  return fetchJson<NiAssemblyDivisionsResponse>(
+    `/plenary_json.ashx?m=GetVotesOnDivision&startDate=${startDate}&endDate=${endDate}`
+  );
+}
+
+export async function getDivisionResult(
+  documentId: string
+): Promise<NiAssemblyDivisionResultResponse> {
+  return fetchJson<NiAssemblyDivisionResultResponse>(
+    `/plenary_json.ashx?m=GetDivisionResult&documentId=${documentId}`
+  );
+}
+
+export async function getDivisionMemberVoting(
+  documentId: string
+): Promise<NiAssemblyMemberVotingResponse> {
+  return fetchJson<NiAssemblyMemberVotingResponse>(
+    `/plenary_json.ashx?m=GetDivisionMemberVoting&documentId=${documentId}`
   );
 }

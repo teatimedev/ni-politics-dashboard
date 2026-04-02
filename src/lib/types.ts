@@ -24,6 +24,33 @@ export interface MemberRole {
   end_date: string | null;
 }
 
+export interface Division {
+  division_id: string;
+  date: string;
+  title: string | null;
+  motion_text: string | null;
+  outcome: string | null;
+  division_type: string | null;
+  ayes: number;
+  noes: number;
+  abstentions: number;
+  nationalist_ayes: number;
+  unionist_ayes: number;
+  other_ayes: number;
+  nationalist_noes: number;
+  unionist_noes: number;
+  other_noes: number;
+  created_at: string;
+}
+
+export interface MemberVote {
+  id: string;
+  person_id: string;
+  division_id: string;
+  vote: string;
+  designation: string | null;
+}
+
 export interface SyncLogEntry {
   id: string;
   source: string;
