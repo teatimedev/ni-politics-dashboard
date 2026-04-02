@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { InterestCard } from "@/components/interest-card";
 import { MoneyFilters } from "@/components/money-filters";
+import { Badge } from "@/components/ui/badge";
 
 interface PageProps {
   searchParams: Promise<{
@@ -105,6 +106,81 @@ export default async function MoneyPage({ searchParams }: PageProps) {
           No interests found. Try adjusting your filters or run the sync first.
         </p>
       )}
+
+      {/* Party Donations Section */}
+      <PartyDonationsSection />
+    </div>
+  );
+}
+
+async function PartyDonationsSection() {
+  const supabase = createServiceClient();
+
+  const { data: donations } = await supabase
+    .from("party_donations")
+    .select("*")
+    .order("date_accepted", { ascending: false })
+    .limit(50);
+
+  if (!donations || donations.length === 0) return null;
+
+  // Group by party for summary
+  const partyTotals = new Map<string, number>();
+  for (const d of donations) {
+    const current = partyTotals.get(d.party) ?? 0;
+    partyTotals.set(d.party, current + (d.amount ?? 0));
+  }
+
+  return (
+    <div className="mt-12">
+      <h2 className="text-2xl font-bold tracking-tight mb-2">
+        Party Donations
+      </h2>
+      <p className="text-muted-foreground mb-4">
+        Donations to NI political parties (Electoral Commission data, from July 2017)
+      </p>
+
+      {/* Party totals */}
+      <div className="mb-6 flex flex-wrap gap-3">
+        {[...partyTotals.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([party, total]) => (
+            <div
+              key={party}
+              className="rounded-lg border border-border bg-card px-4 py-2"
+            >
+              <p className="text-xs text-muted-foreground">{party}</p>
+              <p className="text-lg font-semibold">
+                £{total.toLocaleString("en-GB", { minimumFractionDigits: 0 })}
+              </p>
+            </div>
+          ))}
+      </div>
+
+      {/* Recent donations list */}
+      <div className="space-y-2">
+        {donations.map((d: any) => (
+          <div
+            key={d.id}
+            className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3"
+          >
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                {d.donor_name || "Anonymous"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {d.party} · {d.donation_type} · {d.donor_status}
+              </p>
+            </div>
+            <Badge variant="secondary" className="bg-amber-900/30 text-amber-400">
+              £{(d.amount ?? 0).toLocaleString("en-GB")}
+            </Badge>
+            <span className="text-xs text-muted-foreground w-24 text-right">
+              {d.date_accepted}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
