@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createServiceClient } from "@/lib/supabase/server";
 import {
   getPartyColourClass,
   getPartyShortName,
 } from "@/lib/party-colours";
+import { VotingRecordTab } from "@/components/voting-record-tab";
 import type { Member, MemberRole } from "@/lib/types";
 
 interface PageProps {
@@ -28,6 +30,15 @@ export default async function MlaProfilePage({ params }: PageProps) {
     .select("*")
     .eq("person_id", personId)
     .order("start_date", { ascending: false });
+
+  // Fetch voting record with division details
+  const { data: votes } = await supabase
+    .from("member_votes")
+    .select(
+      "id, vote, designation, divisions(division_id, date, title, outcome, ayes, noes, division_type)"
+    )
+    .eq("person_id", personId)
+    .order("id", { ascending: false });
 
   const mla = member as Member;
   const mlaRoles = (roles ?? []) as MemberRole[];
@@ -103,13 +114,63 @@ export default async function MlaProfilePage({ params }: PageProps) {
         </div>
       )}
 
-      {/* Tabs placeholder — filled in by later phases */}
-      <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
-        <p>
-          Voting record, Hansard, interests, expenses, questions, news, and
-          standards tabs will be added in subsequent phases.
-        </p>
-      </div>
+      {/* Tabs */}
+      <Tabs defaultValue="voting" className="w-full">
+        <TabsList>
+          <TabsTrigger value="voting">
+            Voting Record ({(votes ?? []).length})
+          </TabsTrigger>
+          <TabsTrigger value="hansard" disabled>
+            Hansard
+          </TabsTrigger>
+          <TabsTrigger value="interests" disabled>
+            Interests
+          </TabsTrigger>
+          <TabsTrigger value="expenses" disabled>
+            Expenses
+          </TabsTrigger>
+          <TabsTrigger value="questions" disabled>
+            Questions
+          </TabsTrigger>
+          <TabsTrigger value="news" disabled>
+            News
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="voting" className="mt-4">
+          <VotingRecordTab votes={(votes as any) ?? []} />
+        </TabsContent>
+
+        <TabsContent value="hansard">
+          <p className="py-8 text-center text-muted-foreground">
+            Coming in Phase 3.
+          </p>
+        </TabsContent>
+
+        <TabsContent value="interests">
+          <p className="py-8 text-center text-muted-foreground">
+            Coming in Phase 4.
+          </p>
+        </TabsContent>
+
+        <TabsContent value="expenses">
+          <p className="py-8 text-center text-muted-foreground">
+            Coming in Phase 7.
+          </p>
+        </TabsContent>
+
+        <TabsContent value="questions">
+          <p className="py-8 text-center text-muted-foreground">
+            Coming in Phase 6.
+          </p>
+        </TabsContent>
+
+        <TabsContent value="news">
+          <p className="py-8 text-center text-muted-foreground">
+            Coming in Phase 5.
+          </p>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
