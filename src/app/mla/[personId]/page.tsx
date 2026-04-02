@@ -8,6 +8,7 @@ import {
 } from "@/lib/party-colours";
 import { VotingRecordTab } from "@/components/voting-record-tab";
 import { HansardContributionCard } from "@/components/hansard-contribution-card";
+import { InterestCard } from "@/components/interest-card";
 import type { Member, MemberRole, HansardContribution } from "@/lib/types";
 
 interface PageProps {
@@ -39,6 +40,14 @@ export default async function MlaProfilePage({ params }: PageProps) {
     .eq("person_id", personId)
     .order("date", { ascending: false })
     .limit(50);
+
+  // Fetch interests
+  const { data: interestsData } = await supabase
+    .from("interests")
+    .select("*")
+    .eq("person_id", personId)
+    .eq("in_latest", true)
+    .order("category", { ascending: true });
 
   // Fetch voting record with division details
   const { data: votes } = await supabase
@@ -140,8 +149,8 @@ export default async function MlaProfilePage({ params }: PageProps) {
           <TabsTrigger value="hansard">
             Hansard ({hansardContributions.length})
           </TabsTrigger>
-          <TabsTrigger value="interests" disabled>
-            Interests
+          <TabsTrigger value="interests">
+            Interests ({(interestsData ?? []).length})
           </TabsTrigger>
           <TabsTrigger value="expenses" disabled>
             Expenses
@@ -177,10 +186,18 @@ export default async function MlaProfilePage({ params }: PageProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="interests">
-          <p className="py-8 text-center text-muted-foreground">
-            Coming in Phase 4.
-          </p>
+        <TabsContent value="interests" className="mt-4">
+          {(interestsData ?? []).length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">
+              No declared interests found for this MLA.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {(interestsData ?? []).map((interest: any) => (
+                <InterestCard key={interest.id} interest={interest} />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="expenses">
