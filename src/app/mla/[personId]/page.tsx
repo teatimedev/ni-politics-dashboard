@@ -49,6 +49,14 @@ export default async function MlaProfilePage({ params }: PageProps) {
     .order("date", { ascending: false })
     .limit(50);
 
+  // Fetch news quotes for this MLA
+  const { data: newsQuotes } = await supabase
+    .from("news_mla_quotes")
+    .select("id, quoted_text, sentiment_score, news_mentions!inner(headline, source, url, date)")
+    .eq("person_id", personId)
+    .order("id", { ascending: false })
+    .limit(20);
+
   // Fetch interests
   const { data: interestsData } = await supabase
     .from("interests")
@@ -166,8 +174,8 @@ export default async function MlaProfilePage({ params }: PageProps) {
           <TabsTrigger value="questions">
             Questions ({(questionsData ?? []).length})
           </TabsTrigger>
-          <TabsTrigger value="news" disabled>
-            News
+          <TabsTrigger value="news">
+            News ({(newsQuotes ?? []).length})
           </TabsTrigger>
         </TabsList>
 
@@ -253,10 +261,46 @@ export default async function MlaProfilePage({ params }: PageProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="news">
-          <p className="py-8 text-center text-muted-foreground">
-            Coming in Phase 5.
-          </p>
+        <TabsContent value="news" className="mt-4">
+          {(newsQuotes ?? []).length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">
+              No news mentions found for this MLA.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {(newsQuotes ?? []).map((q: any) => {
+                const article = q.news_mentions;
+                return (
+                  <div
+                    key={q.id}
+                    className="rounded-lg border border-border bg-card p-4"
+                  >
+                    <a
+                      href={article?.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-foreground hover:text-accent"
+                    >
+                      {article?.headline}
+                    </a>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {article?.source}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {article?.date
+                          ? new Date(article.date).toLocaleDateString("en-GB")
+                          : ""}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm text-foreground/80 italic">
+                      &ldquo;{q.quoted_text}&rdquo;
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
