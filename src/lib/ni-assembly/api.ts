@@ -6,6 +6,7 @@ import type {
   NiAssemblyMemberVotingResponse,
   NiAssemblyHansardReportsResponse,
   NiAssemblyHansardComponentsResponse,
+  NiAssemblyQuestionsResponse,
 } from "./types";
 
 const BASE_URL = "https://data.niassembly.gov.uk";
@@ -76,5 +77,23 @@ export async function getHansardComponentsByPlenaryDate(
 ): Promise<NiAssemblyHansardComponentsResponse> {
   return fetchJson<NiAssemblyHansardComponentsResponse>(
     `/hansard.asmx/GetHansardComponentsByPlenaryDate_JSON?plenaryDate=${plenaryDate}`
+  );
+}
+
+export async function getWrittenQuestions(
+  startDate: string,
+  endDate: string
+): Promise<NiAssemblyQuestionsResponse> {
+  return fetchJson<NiAssemblyQuestionsResponse>(
+    `/questions_json.ashx?m=GetQuestionsForWrittenAnswer_TabledInRange&startDate=${startDate}&endDate=${endDate}`
+  );
+}
+
+export async function getOralQuestions(
+  startDate: string,
+  endDate: string
+): Promise<NiAssemblyQuestionsResponse> {
+  return fetchJson<NiAssemblyQuestionsResponse>(
+    `/questions_json.ashx?m=GetQuestionsForOralAnswer_TabledInRange&startDate=${startDate}&endDate=${endDate}`
   );
 }

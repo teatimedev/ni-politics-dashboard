@@ -41,6 +41,14 @@ export default async function MlaProfilePage({ params }: PageProps) {
     .order("date", { ascending: false })
     .limit(50);
 
+  // Fetch questions
+  const { data: questionsData } = await supabase
+    .from("questions")
+    .select("*")
+    .eq("person_id", personId)
+    .order("date", { ascending: false })
+    .limit(50);
+
   // Fetch interests
   const { data: interestsData } = await supabase
     .from("interests")
@@ -155,8 +163,8 @@ export default async function MlaProfilePage({ params }: PageProps) {
           <TabsTrigger value="expenses" disabled>
             Expenses
           </TabsTrigger>
-          <TabsTrigger value="questions" disabled>
-            Questions
+          <TabsTrigger value="questions">
+            Questions ({(questionsData ?? []).length})
           </TabsTrigger>
           <TabsTrigger value="news" disabled>
             News
@@ -206,10 +214,43 @@ export default async function MlaProfilePage({ params }: PageProps) {
           </p>
         </TabsContent>
 
-        <TabsContent value="questions">
-          <p className="py-8 text-center text-muted-foreground">
-            Coming in Phase 6.
-          </p>
+        <TabsContent value="questions" className="mt-4">
+          {(questionsData ?? []).length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground">
+              No questions found for this MLA.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {(questionsData ?? []).map((q: any) => (
+                <div
+                  key={q.id}
+                  className="rounded-lg border border-border bg-card p-4"
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {q.question_type === "written" ? "Written" : "Oral"}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {q.department}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {q.date}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground/90">
+                    {q.question_text}
+                  </p>
+                  {q.answer_text && (
+                    <div className="mt-3 rounded border-l-2 border-accent pl-3">
+                      <p className="text-sm text-muted-foreground">
+                        {q.answer_text}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="news">

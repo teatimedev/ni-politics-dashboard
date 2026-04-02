@@ -102,6 +102,29 @@ export interface NiAssemblyMemberVotingResponse {
   };
 }
 
+export interface NiAssemblyQuestion {
+  DocumentId: string;
+  DocumentType: string;
+  Reference: string;
+  TablerName: string;
+  TablerTitle: string;
+  TablerPersonId: string;
+  TabledDate: string;
+  QuestionText: string;
+  AnswerByDate: string;
+  PriorityRequest: string;
+  MinisterTitle: string;
+  MinisterPersonId: string;
+  Department: string;
+  DepartmentID: string;
+}
+
+export interface NiAssemblyQuestionsResponse {
+  QuestionsList: {
+    Question: NiAssemblyQuestion[];
+  };
+}
+
 export interface NiAssemblyHansardReport {
   ReportDocId: string;
   PlenaryDate: string;
