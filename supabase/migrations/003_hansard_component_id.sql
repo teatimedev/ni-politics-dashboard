@@ -2,8 +2,7 @@
 ALTER TABLE hansard_contributions
   ADD COLUMN IF NOT EXISTS component_id TEXT;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_hansard_component_id
-  ON hansard_contributions(component_id)
-  WHERE component_id IS NOT NULL;
+ALTER TABLE hansard_contributions
+  ADD CONSTRAINT hansard_contributions_component_id_key UNIQUE (component_id);
 
 CREATE INDEX IF NOT EXISTS idx_hansard_plenary ON hansard_contributions(plenary_id);
