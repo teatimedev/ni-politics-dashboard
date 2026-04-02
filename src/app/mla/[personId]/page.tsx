@@ -99,7 +99,7 @@ export default async function MlaProfilePage({ params }: PageProps) {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start gap-6 mb-8">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 mb-8 text-center sm:text-left">
         {mla.photo_url ? (
           <img
             src={mla.photo_url}
@@ -158,7 +158,7 @@ export default async function MlaProfilePage({ params }: PageProps) {
 
       {/* Tabs */}
       <Tabs defaultValue="voting" className="w-full">
-        <TabsList>
+        <TabsList className="w-full overflow-x-auto flex-nowrap justify-start">
           <TabsTrigger value="voting">
             Voting Record ({(votes ?? []).length})
           </TabsTrigger>

@@ -68,21 +68,21 @@ export default async function HomePage() {
   ];
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold tracking-tight">
+    <div className="animate-in-stagger">
+      <h1 className="text-4xl font-bold tracking-tight">
         Stormont Watch
       </h1>
-      <p className="mt-1 text-muted-foreground">
+      <p className="mt-1 text-muted-foreground text-lg">
         Northern Ireland Assembly politics dashboard
       </p>
 
       {/* Stats grid */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {stats.map((s) => (
           <Link
             key={s.label}
             href={s.href}
-            className="rounded-lg border border-border bg-card p-4 transition-colors hover:bg-muted"
+            className="card-glow rounded-lg border border-border bg-card p-4 transition-all duration-200 hover:bg-muted"
           >
             <p className="text-xs text-muted-foreground">{s.label}</p>
             <p className="text-2xl font-bold">{s.value.toLocaleString()}</p>

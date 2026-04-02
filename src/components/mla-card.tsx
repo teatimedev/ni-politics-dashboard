@@ -14,7 +14,7 @@ interface MlaCardProps {
 export function MlaCard({ member }: MlaCardProps) {
   return (
     <Link href={`/mla/${member.person_id}`}>
-      <Card className="flex items-center gap-4 border-border bg-card p-4 transition-colors hover:bg-muted">
+      <Card className="card-glow flex items-center gap-4 border-border bg-card p-4 transition-all duration-200 hover:bg-muted">
         {member.photo_url ? (
           <img
             src={member.photo_url}

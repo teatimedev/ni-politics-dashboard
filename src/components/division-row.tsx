@@ -33,11 +33,11 @@ export function DivisionRow({ division }: DivisionRowProps) {
           {division.title}
         </span>
 
-        <Badge variant="secondary" className="shrink-0 text-xs">
+        <Badge variant="secondary" className="shrink-0 text-xs hidden sm:inline-flex">
           {division.division_type ?? "Vote"}
         </Badge>
 
-        <span className="shrink-0 text-xs text-muted-foreground w-24 text-right">
+        <span className="shrink-0 text-xs text-muted-foreground w-24 text-right hidden sm:block">
           {division.date}
         </span>
 
@@ -47,7 +47,7 @@ export function DivisionRow({ division }: DivisionRowProps) {
           <XCircle className="h-4 w-4 shrink-0 text-red-500" />
         )}
 
-        <span className="shrink-0 text-xs text-muted-foreground w-20 text-right">
+        <span className="shrink-0 text-xs text-muted-foreground w-16 sm:w-20 text-right">
           {division.ayes}–{division.noes}
         </span>
       </button>
