@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { getCategoryLabel } from "@/lib/news-categories";
 
 interface NewsQuote {
   id: string;
@@ -23,6 +24,7 @@ interface ExpandableNewsCardProps {
     snippet: string | null;
     full_text: string | null;
     article_sentiment: number | null;
+    category: string | null;
     news_mla_quotes: NewsQuote[];
   };
 }
@@ -62,6 +64,14 @@ export function ExpandableNewsCard({ article }: ExpandableNewsCardProps) {
             <Badge variant="secondary" className="text-xs">
               {article.source}
             </Badge>
+            {article.category && (
+              <Badge
+                variant="secondary"
+                className="text-xs rounded-full bg-zinc-800 text-zinc-400"
+              >
+                {getCategoryLabel(article.category)}
+              </Badge>
+            )}
             <span className="text-xs text-muted-foreground">
               {article.date
                 ? new Date(article.date).toLocaleDateString("en-GB", {
