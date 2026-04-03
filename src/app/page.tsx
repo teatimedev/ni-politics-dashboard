@@ -69,7 +69,7 @@ export default async function HomePage() {
   ];
 
   return (
-    <div className="animate-in-stagger">
+    <div className="animate-in-stagger min-w-0">
       <h1 className="text-4xl font-bold tracking-tight">
         Stormont Watch
       </h1>
@@ -114,9 +114,9 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
+      <div className="mt-8 grid gap-6 lg:grid-cols-2 min-w-0">
         {/* Recent Divisions */}
-        <div>
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold mb-3">Recent Votes</h2>
           <div className="space-y-2">
             {(recentDivisions ?? []).map((d) => {
@@ -150,7 +150,7 @@ export default async function HomePage() {
         </div>
 
         {/* Recent Hansard */}
-        <div>
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold mb-3">Recent Debate</h2>
           <div className="space-y-2">
             {((recentHansard ?? []) as unknown as HansardWithMember[]).map((h) => (
