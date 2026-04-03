@@ -145,7 +145,10 @@ function extractWithCheerio(html: string, url: string): string | null {
   paragraphs = paragraphs.filter((p) =>
     !p.match(/^(Share|Save|Copy link|Published|Updated|Sign up|Subscribe|Read more|Advertisement|Getty|PA|Reuters|Alamy)/i) &&
     !p.match(/^\d+ (minutes?|hours?|days?) ago$/i) &&
-    !p.match(/^Image (source|caption)/i)
+    !p.match(/^Image (source|caption)/i) &&
+    !p.match(/Did you know with a (Digital )?Subscription/i) &&
+    !p.match(/unlimited access to the website/i) &&
+    !p.match(/Assistant (Sports |News )?Editor$/i)
   );
 
   if (paragraphs.length < 2) return null;
