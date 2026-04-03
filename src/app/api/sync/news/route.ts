@@ -200,8 +200,6 @@ export async function GET(request: NextRequest) {
     const feedResults = await Promise.all(
       RSS_FEEDS.map((feed) => fetchRSSItems(feed.url, feed.source))
     );
-    const allItems = feedResults.flat();
-
     // Get existing URLs to skip duplicates
     const { data: existingNews } = await supabase
       .from("news_mentions")
@@ -210,7 +208,17 @@ export async function GET(request: NextRequest) {
       (existingNews ?? []).map((n) => n.url)
     );
 
-    const newItems = allItems.filter((item) => !existingUrls.has(item.link));
+    // Filter each feed's new items, then interleave round-robin for fair coverage
+    const newByFeed = feedResults.map((items) =>
+      items.filter((item) => !existingUrls.has(item.link))
+    );
+    const newItems: RSSItem[] = [];
+    const maxLen = Math.max(...newByFeed.map((f) => f.length));
+    for (let i = 0; i < maxLen; i++) {
+      for (const feed of newByFeed) {
+        if (i < feed.length) newItems.push(feed[i]);
+      }
+    }
 
     let totalArticles = 0;
     let totalQuotes = 0;
@@ -287,10 +295,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      feed_items: allItems.length,
+      feed_items: feedResults.reduce((n, f) => n + f.length, 0),
       new_articles: totalArticles,
       mla_quotes: totalQuotes,
-      skipped_existing: allItems.length - newItems.length,
+      new_candidates: newItems.length,
     });
   } catch (error) {
     const message =
