@@ -4,6 +4,7 @@ import { generateText, Output } from "ai";
 import { groq } from "@ai-sdk/groq";
 import { z } from "zod";
 import * as cheerio from "cheerio";
+import { CATEGORY_KEYS } from "@/lib/news-categories";
 
 export const maxDuration = 120;
 
@@ -192,6 +193,9 @@ const mlaQuoteSchema = z.object({
     .min(-1)
     .max(1)
     .describe("Overall article sentiment from -1 to 1"),
+  category: z
+    .enum(CATEGORY_KEYS as unknown as [string, ...string[]])
+    .describe("Primary topic category for the article"),
 });
 
 async function extractMlaQuotes(
@@ -210,11 +214,13 @@ Known NI MLAs: ${mlaNames.slice(0, 50).join(", ")}
 Article title: ${title}
 Article text: ${description}
 
-Extract any direct or indirect quotes attributed to specific MLAs. If no MLAs are quoted, return an empty array. Only include quotes you are confident are from the article, not invented.`,
+Extract any direct or indirect quotes attributed to specific MLAs. If no MLAs are quoted, return an empty array. Only include quotes you are confident are from the article, not invented.
+
+Also classify this article into exactly one category: health, economy, education, justice, infrastructure, assembly, legacy-identity, environment, or other. Pick the single best fit based on the primary topic.`,
     });
-    return output ?? { mla_quotes: [], article_sentiment: 0 };
+    return output ?? { mla_quotes: [], article_sentiment: 0, category: "other" as const };
   } catch {
-    return { mla_quotes: [], article_sentiment: 0 };
+    return { mla_quotes: [], article_sentiment: 0, category: "other" as const };
   }
 }
 
@@ -312,6 +318,7 @@ export async function GET(request: NextRequest) {
           snippet: item.description.slice(0, 500),
           full_text: fullText?.slice(0, 10000) ?? null,
           article_sentiment: extraction.article_sentiment,
+          category: extraction.category,
         })
         .select("id")
         .single();
