@@ -11,6 +11,18 @@ const RSS_FEEDS = [
     url: "https://feeds.bbci.co.uk/news/northern_ireland/rss.xml",
     source: "BBC News NI",
   },
+  {
+    url: "https://www.newsletter.co.uk/rss",
+    source: "News Letter",
+  },
+  {
+    url: "https://www.sluggerotoole.com/feed/",
+    source: "Slugger O'Toole",
+  },
+  {
+    url: "https://www.agendani.com/feed/",
+    source: "agendaNi",
+  },
 ];
 
 interface RSSItem {
@@ -142,12 +154,11 @@ export async function GET(request: NextRequest) {
       nameToPersonId.set(lastName, m.person_id);
     }
 
-    // Fetch RSS items from all feeds
-    const allItems: RSSItem[] = [];
-    for (const feed of RSS_FEEDS) {
-      const items = await fetchRSSItems(feed.url, feed.source);
-      allItems.push(...items);
-    }
+    // Fetch RSS items from all feeds in parallel
+    const feedResults = await Promise.all(
+      RSS_FEEDS.map((feed) => fetchRSSItems(feed.url, feed.source))
+    );
+    const allItems = feedResults.flat();
 
     // Get existing URLs to skip duplicates
     const { data: existingNews } = await supabase
@@ -162,8 +173,8 @@ export async function GET(request: NextRequest) {
     let totalArticles = 0;
     let totalQuotes = 0;
 
-    // Process each new article (limit to 20 per sync to stay within Groq limits)
-    for (const item of newItems.slice(0, 20)) {
+    // Process each new article (limit to 40 per sync to stay within Groq limits)
+    for (const item of newItems.slice(0, 40)) {
       // Run LLM extraction
       const extraction = await extractMlaQuotes(
         item.title,
