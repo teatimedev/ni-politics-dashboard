@@ -1,15 +1,27 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import type { NewsArticleWithQuotes } from "@/lib/db-types";
 
-export default async function NewsPage() {
+interface PageProps {
+  searchParams: Promise<{ page?: string }>;
+}
+
+export default async function NewsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const supabase = createServiceClient();
 
-  const { data: news } = await supabase
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const pageSize = 30;
+  const from = (page - 1) * pageSize;
+
+  const { data: news, count: totalCount } = await supabase
     .from("news_mentions")
-    .select("*, news_mla_quotes(id, person_id, quoted_text, sentiment_score, members!inner(name, party))")
+    .select("*, news_mla_quotes(id, person_id, quoted_text, sentiment_score, members!inner(name, party))", { count: "exact" })
     .order("date", { ascending: false })
-    .limit(50);
+    .range(from, from + pageSize - 1);
+
+  const totalPages = Math.ceil((totalCount ?? 0) / pageSize);
 
   return (
     <div>
@@ -21,12 +33,13 @@ export default async function NewsPage() {
       </div>
 
       <div className="space-y-4">
-        {(news ?? []).map((article: any) => {
+        {((news ?? []) as NewsArticleWithQuotes[]).map((article) => {
           const quotes = article.news_mla_quotes ?? [];
+          const sentiment = article.article_sentiment ?? 0;
           const sentimentClass =
-            article.article_sentiment > 0.2
+            sentiment > 0.2
               ? "border-l-green-700/40"
-              : article.article_sentiment < -0.2
+              : sentiment < -0.2
                 ? "border-l-red-700/40"
                 : "border-l-border";
 
@@ -38,7 +51,7 @@ export default async function NewsPage() {
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
                   <a
-                    href={article.url}
+                    href={article.url ?? "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-lg font-semibold text-foreground hover:text-accent transition-colors"
@@ -88,7 +101,7 @@ export default async function NewsPage() {
                   <p className="text-xs font-medium text-muted-foreground">
                     MLA Statements
                   </p>
-                  {quotes.map((q: any) => {
+                  {quotes.map((q) => {
                     const m = q.members;
                     return (
                       <div
@@ -139,6 +152,30 @@ export default async function NewsPage() {
           <p className="mt-12 text-center text-muted-foreground">
             No news articles found. Run the news sync to populate.
           </p>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            {page > 1 && (
+              <a
+                href={`/news?page=${page - 1}`}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+              >
+                Previous
+              </a>
+            )}
+            <span className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </span>
+            {page < totalPages && (
+              <a
+                href={`/news?page=${page + 1}`}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+              >
+                Next
+              </a>
+            )}
+          </div>
         )}
       </div>
     </div>

@@ -2,12 +2,14 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { InterestCard } from "@/components/interest-card";
 import { MoneyFilters } from "@/components/money-filters";
 import { Badge } from "@/components/ui/badge";
+import type { InterestWithMember } from "@/lib/db-types";
 
 interface PageProps {
   searchParams: Promise<{
     q?: string;
     category?: string;
     mla?: string;
+    page?: string;
   }>;
 }
 
@@ -15,12 +17,14 @@ export default async function MoneyPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = createServiceClient();
 
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const pageSize = 50;
+
   let query = supabase
     .from("interests")
-    .select("*, members!inner(person_id, name)")
+    .select("*, members!inner(person_id, name)", { count: "exact" })
     .eq("in_latest", true)
-    .order("date_published", { ascending: false })
-    .limit(200);
+    .order("date_published", { ascending: false });
 
   if (params.category) {
     query = query.eq("category", params.category);
@@ -32,7 +36,11 @@ export default async function MoneyPage({ searchParams }: PageProps) {
     query = query.ilike("content", `%${params.q}%`);
   }
 
-  const { data: interests } = await query;
+  const from = (page - 1) * pageSize;
+  query = query.range(from, from + pageSize - 1);
+
+  const { data: interests, count: totalCount } = await query;
+  const totalPages = Math.ceil((totalCount ?? 0) / pageSize);
 
   // Get distinct categories for filter
   const { data: allInterests } = await supabase
@@ -52,7 +60,7 @@ export default async function MoneyPage({ searchParams }: PageProps) {
 
   const mlaMap = new Map<string, string>();
   for (const i of interestMembers ?? []) {
-    const m = i.members as any;
+    const m = i.members as unknown as { person_id: string; name: string };
     if (m?.name) mlaMap.set(m.person_id, m.name);
   }
   const mlaNames = [...mlaMap.entries()]
@@ -76,7 +84,7 @@ export default async function MoneyPage({ searchParams }: PageProps) {
       <div className="mt-4 mb-6 flex flex-wrap gap-2">
         {categories.map((cat) => {
           const count = (interests ?? []).filter(
-            (i: any) => i.category === cat
+            (i) => (i as InterestWithMember).category === cat
           ).length;
           if (count === 0) return null;
           return (
@@ -92,7 +100,7 @@ export default async function MoneyPage({ searchParams }: PageProps) {
       </div>
 
       <div className="space-y-3">
-        {(interests ?? []).map((interest: any) => (
+        {((interests ?? []) as InterestWithMember[]).map((interest) => (
           <InterestCard
             key={interest.id}
             interest={interest}
@@ -100,6 +108,30 @@ export default async function MoneyPage({ searchParams }: PageProps) {
           />
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2">
+          {page > 1 && (
+            <a
+              href={`/money?${new URLSearchParams({ ...(params.q ? { q: params.q } : {}), ...(params.category ? { category: params.category } : {}), ...(params.mla ? { mla: params.mla } : {}), page: String(page - 1) }).toString()}`}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+            >
+              Previous
+            </a>
+          )}
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          {page < totalPages && (
+            <a
+              href={`/money?${new URLSearchParams({ ...(params.q ? { q: params.q } : {}), ...(params.category ? { category: params.category } : {}), ...(params.mla ? { mla: params.mla } : {}), page: String(page + 1) }).toString()}`}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+            >
+              Next
+            </a>
+          )}
+        </div>
+      )}
 
       {(interests ?? []).length === 0 && (
         <p className="mt-12 text-center text-muted-foreground">
@@ -159,7 +191,7 @@ async function PartyDonationsSection() {
 
       {/* Recent donations list */}
       <div className="space-y-2">
-        {donations.map((d: any) => (
+        {donations.map((d) => (
           <div
             key={d.id}
             className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3"

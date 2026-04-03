@@ -9,6 +9,7 @@ interface PageProps {
     mla?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }
 
@@ -16,12 +17,14 @@ export default async function HansardPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = createServiceClient();
 
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const pageSize = 50;
+
   let query = supabase
     .from("hansard_contributions")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("date", { ascending: false })
-    .order("component_id", { ascending: true })
-    .limit(200);
+    .order("component_id", { ascending: true });
 
   if (params.mla) {
     query = query.eq("person_id", params.mla);
@@ -38,7 +41,11 @@ export default async function HansardPage({ searchParams }: PageProps) {
     );
   }
 
-  const { data: contributions } = await query;
+  const from = (page - 1) * pageSize;
+  query = query.range(from, from + pageSize - 1);
+
+  const { data: contributions, count: totalCount } = await query;
+  const totalPages = Math.ceil((totalCount ?? 0) / pageSize);
   const typedContributions = (contributions ?? []) as HansardContribution[];
 
   // Collect unique person_ids to fetch member info
@@ -136,6 +143,30 @@ export default async function HansardPage({ searchParams }: PageProps) {
             No Hansard contributions found. Try adjusting your filters or run
             the sync first.
           </p>
+        )}
+
+        {totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            {page > 1 && (
+              <a
+                href={`/hansard?${new URLSearchParams({ ...(params.q ? { q: params.q } : {}), ...(params.mla ? { mla: params.mla } : {}), ...(params.from ? { from: params.from } : {}), ...(params.to ? { to: params.to } : {}), page: String(page - 1) }).toString()}`}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+              >
+                Previous
+              </a>
+            )}
+            <span className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </span>
+            {page < totalPages && (
+              <a
+                href={`/hansard?${new URLSearchParams({ ...(params.q ? { q: params.q } : {}), ...(params.mla ? { mla: params.mla } : {}), ...(params.from ? { from: params.from } : {}), ...(params.to ? { to: params.to } : {}), page: String(page + 1) }).toString()}`}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+              >
+                Next
+              </a>
+            )}
+          </div>
         )}
       </div>
     </div>

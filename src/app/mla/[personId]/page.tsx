@@ -10,6 +10,7 @@ import { VotingRecordTab } from "@/components/voting-record-tab";
 import { HansardContributionCard } from "@/components/hansard-contribution-card";
 import { InterestCard } from "@/components/interest-card";
 import type { Member, MemberRole, HansardContribution } from "@/lib/types";
+import type { VoteWithDivision, NewsQuoteWithArticle } from "@/lib/db-types";
 
 interface PageProps {
   params: Promise<{ personId: string }>;
@@ -19,60 +20,55 @@ export default async function MlaProfilePage({ params }: PageProps) {
   const { personId } = await params;
   const supabase = createServiceClient();
 
-  const { data: member } = await supabase
-    .from("members")
-    .select("*")
-    .eq("person_id", personId)
-    .single();
+  const [
+    { data: member },
+    { data: roles },
+    { data: hansardData },
+    { data: questionsData },
+    { data: newsQuotes },
+    { data: interestsData },
+    { data: votes },
+  ] = await Promise.all([
+    supabase.from("members").select("*").eq("person_id", personId).single(),
+    supabase
+      .from("member_roles")
+      .select("*")
+      .eq("person_id", personId)
+      .order("start_date", { ascending: false }),
+    supabase
+      .from("hansard_contributions")
+      .select("*")
+      .eq("person_id", personId)
+      .order("date", { ascending: false })
+      .limit(50),
+    supabase
+      .from("questions")
+      .select("*")
+      .eq("person_id", personId)
+      .order("date", { ascending: false })
+      .limit(50),
+    supabase
+      .from("news_mla_quotes")
+      .select("id, quoted_text, sentiment_score, news_mentions!inner(headline, source, url, date)")
+      .eq("person_id", personId)
+      .order("id", { ascending: false })
+      .limit(20),
+    supabase
+      .from("interests")
+      .select("*")
+      .eq("person_id", personId)
+      .eq("in_latest", true)
+      .order("category", { ascending: true }),
+    supabase
+      .from("member_votes")
+      .select(
+        "id, vote, designation, divisions(division_id, date, title, outcome, ayes, noes, division_type)"
+      )
+      .eq("person_id", personId)
+      .order("id", { ascending: false }),
+  ]);
 
   if (!member) notFound();
-
-  const { data: roles } = await supabase
-    .from("member_roles")
-    .select("*")
-    .eq("person_id", personId)
-    .order("start_date", { ascending: false });
-
-  // Fetch Hansard contributions
-  const { data: hansardData } = await supabase
-    .from("hansard_contributions")
-    .select("*")
-    .eq("person_id", personId)
-    .order("date", { ascending: false })
-    .limit(50);
-
-  // Fetch questions
-  const { data: questionsData } = await supabase
-    .from("questions")
-    .select("*")
-    .eq("person_id", personId)
-    .order("date", { ascending: false })
-    .limit(50);
-
-  // Fetch news quotes for this MLA
-  const { data: newsQuotes } = await supabase
-    .from("news_mla_quotes")
-    .select("id, quoted_text, sentiment_score, news_mentions!inner(headline, source, url, date)")
-    .eq("person_id", personId)
-    .order("id", { ascending: false })
-    .limit(20);
-
-  // Fetch interests
-  const { data: interestsData } = await supabase
-    .from("interests")
-    .select("*")
-    .eq("person_id", personId)
-    .eq("in_latest", true)
-    .order("category", { ascending: true });
-
-  // Fetch voting record with division details
-  const { data: votes } = await supabase
-    .from("member_votes")
-    .select(
-      "id, vote, designation, divisions(division_id, date, title, outcome, ayes, noes, division_type)"
-    )
-    .eq("person_id", personId)
-    .order("id", { ascending: false });
 
   const mla = member as Member;
   const mlaRoles = (roles ?? []) as MemberRole[];
@@ -168,9 +164,6 @@ export default async function MlaProfilePage({ params }: PageProps) {
           <TabsTrigger value="interests">
             Interests ({(interestsData ?? []).length})
           </TabsTrigger>
-          <TabsTrigger value="expenses" disabled>
-            Expenses
-          </TabsTrigger>
           <TabsTrigger value="questions">
             Questions ({(questionsData ?? []).length})
           </TabsTrigger>
@@ -180,7 +173,7 @@ export default async function MlaProfilePage({ params }: PageProps) {
         </TabsList>
 
         <TabsContent value="voting" className="mt-4">
-          <VotingRecordTab votes={(votes as any) ?? []} />
+          <VotingRecordTab votes={(votes ?? []) as unknown as VoteWithDivision[]} />
         </TabsContent>
 
         <TabsContent value="hansard" className="mt-4">
@@ -209,18 +202,13 @@ export default async function MlaProfilePage({ params }: PageProps) {
             </p>
           ) : (
             <div className="space-y-3">
-              {(interestsData ?? []).map((interest: any) => (
+              {(interestsData ?? []).map((interest) => (
                 <InterestCard key={interest.id} interest={interest} />
               ))}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="expenses">
-          <p className="py-8 text-center text-muted-foreground">
-            Coming in Phase 7.
-          </p>
-        </TabsContent>
 
         <TabsContent value="questions" className="mt-4">
           {(questionsData ?? []).length === 0 ? (
@@ -229,7 +217,7 @@ export default async function MlaProfilePage({ params }: PageProps) {
             </p>
           ) : (
             <div className="space-y-3">
-              {(questionsData ?? []).map((q: any) => (
+              {(questionsData ?? []).map((q) => (
                 <div
                   key={q.id}
                   className="rounded-lg border border-border bg-card p-4"
@@ -248,13 +236,6 @@ export default async function MlaProfilePage({ params }: PageProps) {
                   <p className="text-sm leading-relaxed text-foreground/90">
                     {q.question_text}
                   </p>
-                  {q.answer_text && (
-                    <div className="mt-3 rounded border-l-2 border-accent pl-3">
-                      <p className="text-sm text-muted-foreground">
-                        {q.answer_text}
-                      </p>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
@@ -268,7 +249,7 @@ export default async function MlaProfilePage({ params }: PageProps) {
             </p>
           ) : (
             <div className="space-y-3">
-              {(newsQuotes ?? []).map((q: any) => {
+              {((newsQuotes ?? []) as unknown as NewsQuoteWithArticle[]).map((q) => {
                 const article = q.news_mentions;
                 return (
                   <div
@@ -276,7 +257,7 @@ export default async function MlaProfilePage({ params }: PageProps) {
                     className="rounded-lg border border-border bg-card p-4"
                   >
                     <a
-                      href={article?.url}
+                      href={article?.url ?? "#"}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-medium text-foreground hover:text-accent"

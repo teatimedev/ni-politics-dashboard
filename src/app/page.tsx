@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import type { HansardWithMember, QuestionWithMember, SyncLogLatest } from "@/lib/db-types";
 
 export default async function HomePage() {
   const supabase = createServiceClient();
@@ -51,7 +52,7 @@ export default async function HomePage() {
     .limit(10);
 
   // Deduplicate to latest per source
-  const latestSyncs = new Map<string, any>();
+  const latestSyncs = new Map<string, SyncLogLatest>();
   for (const log of syncLogs ?? []) {
     if (!latestSyncs.has(log.source)) {
       latestSyncs.set(log.source, log);
@@ -118,7 +119,7 @@ export default async function HomePage() {
         <div>
           <h2 className="text-lg font-semibold mb-3">Recent Votes</h2>
           <div className="space-y-2">
-            {(recentDivisions ?? []).map((d: any) => {
+            {(recentDivisions ?? []).map((d) => {
               const passed =
                 d.outcome?.toLowerCase().includes("carried") ||
                 d.outcome?.toLowerCase().includes("agreed");
@@ -152,7 +153,7 @@ export default async function HomePage() {
         <div>
           <h2 className="text-lg font-semibold mb-3">Recent Debate</h2>
           <div className="space-y-2">
-            {(recentHansard ?? []).map((h: any) => (
+            {((recentHansard ?? []) as unknown as HansardWithMember[]).map((h) => (
               <div
                 key={h.id}
                 className="rounded-lg border border-border bg-card p-3"
@@ -162,7 +163,7 @@ export default async function HomePage() {
                     href={`/mla/${h.person_id}`}
                     className="text-sm font-medium text-accent hover:underline"
                   >
-                    {(h.members as any)?.name}
+                    {h.members?.name}
                   </Link>
                   <span className="text-xs text-muted-foreground">
                     {h.date}
@@ -192,7 +193,7 @@ export default async function HomePage() {
       <div className="mt-8">
         <h2 className="text-lg font-semibold mb-3">Recent Questions</h2>
         <div className="space-y-2">
-          {(recentQuestions ?? []).map((q: any) => (
+          {((recentQuestions ?? []) as unknown as QuestionWithMember[]).map((q) => (
             <div
               key={q.id}
               className="rounded-lg border border-border bg-card p-3"
@@ -202,7 +203,7 @@ export default async function HomePage() {
                   href={`/mla/${q.person_id}`}
                   className="text-sm font-medium text-accent hover:underline"
                 >
-                  {(q.members as any)?.name}
+                  {q.members?.name}
                 </Link>
                 <Badge variant="secondary" className="text-xs">
                   {q.question_type === "written" ? "Written" : "Oral"}

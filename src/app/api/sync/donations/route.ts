@@ -1,41 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
+import { parseCSV } from "@/lib/csv";
 
 export const maxDuration = 60;
 
 const EC_CSV_URL =
   "https://search.electoralcommission.org.uk/api/csv/Donations?start=0&rows=5000&query=&sort=AcceptedDate&order=desc&et=pp&register=ni&period=&from=&to=&rptPd=&donorStatus=&prePoll=false&postPoll=false&isIrishSourceYes=&isIrishSourceNo=";
-
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else if (ch === '"') {
-        inQuotes = false;
-      } else {
-        current += ch;
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ",") {
-        result.push(current);
-        current = "";
-      } else {
-        current += ch;
-      }
-    }
-  }
-  result.push(current);
-  return result;
-}
 
 function parseUKDate(dateStr: string): string | null {
   if (!dateStr) return null;
@@ -70,21 +40,7 @@ export async function GET(request: NextRequest) {
     const response = await fetch(EC_CSV_URL);
     if (!response.ok) throw new Error(`EC CSV fetch failed: ${response.status}`);
     const csvText = await response.text();
-
-    const lines = csvText.split("\n");
-    const headers = parseCSVLine(lines[0].replace(/^\uFEFF/, "")); // strip BOM
-    const rows: Record<string, string>[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-      const values = parseCSVLine(line);
-      const row: Record<string, string> = {};
-      headers.forEach((h, idx) => {
-        row[h.trim()] = values[idx] ?? "";
-      });
-      rows.push(row);
-    }
+    const rows = parseCSV(csvText);
 
     // Clear and re-insert (full replacement)
     await supabase

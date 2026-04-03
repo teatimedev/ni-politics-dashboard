@@ -8,6 +8,7 @@ interface PageProps {
     q?: string;
     outcome?: string;
     type?: string;
+    page?: string;
   }>;
 }
 
@@ -15,9 +16,12 @@ export default async function DivisionsPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const supabase = createServiceClient();
 
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const pageSize = 50;
+
   let query = supabase
     .from("divisions")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("date", { ascending: false });
 
   if (params.q) {
@@ -33,7 +37,11 @@ export default async function DivisionsPage({ searchParams }: PageProps) {
     query = query.eq("division_type", params.type);
   }
 
-  const { data: divisions } = await query;
+  const from = (page - 1) * pageSize;
+  query = query.range(from, from + pageSize - 1);
+
+  const { data: divisions, count: totalCount } = await query;
+  const totalPages = Math.ceil((totalCount ?? 0) / pageSize);
 
   // Get distinct division types for filter dropdown
   const { data: allDivisions } = await supabase
@@ -51,7 +59,8 @@ export default async function DivisionsPage({ searchParams }: PageProps) {
       <div className="mb-6">
         <h1 className="text-3xl font-bold tracking-tight">Divisions</h1>
         <p className="mt-1 text-muted-foreground">
-          {(divisions ?? []).length} votes in the Northern Ireland Assembly
+          {totalCount ?? 0} votes in the Northern Ireland Assembly
+          {totalPages > 1 && ` \u2014 page ${page} of ${totalPages}`}
         </p>
       </div>
 
@@ -62,6 +71,30 @@ export default async function DivisionsPage({ searchParams }: PageProps) {
           <DivisionRow key={division.division_id} division={division} />
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center gap-2">
+          {page > 1 && (
+            <a
+              href={`/divisions?${new URLSearchParams({ ...(params.q ? { q: params.q } : {}), ...(params.outcome ? { outcome: params.outcome } : {}), ...(params.type ? { type: params.type } : {}), page: String(page - 1) }).toString()}`}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+            >
+              Previous
+            </a>
+          )}
+          <span className="text-sm text-muted-foreground">
+            Page {page} of {totalPages}
+          </span>
+          {page < totalPages && (
+            <a
+              href={`/divisions?${new URLSearchParams({ ...(params.q ? { q: params.q } : {}), ...(params.outcome ? { outcome: params.outcome } : {}), ...(params.type ? { type: params.type } : {}), page: String(page + 1) }).toString()}`}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+            >
+              Next
+            </a>
+          )}
+        </div>
+      )}
 
       {(divisions ?? []).length === 0 && (
         <p className="mt-12 text-center text-muted-foreground">

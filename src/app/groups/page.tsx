@@ -25,7 +25,7 @@ export default async function GroupsPage() {
   for (const r of apgRoles ?? []) {
     const org = r.organisation ?? "Unknown";
     const existing = groups.get(org) ?? [];
-    const m = r.members as any;
+    const m = r.members as unknown as { name: string; party: string | null; photo_url: string | null };
     existing.push({
       role_name: r.role_name,
       person_id: r.person_id,
