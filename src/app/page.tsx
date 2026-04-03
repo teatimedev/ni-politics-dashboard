@@ -2,11 +2,19 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import type { HansardWithMember, QuestionWithMember, SyncLogLatest } from "@/lib/db-types";
+import { getPartyHex, getPartyShortName } from "@/lib/party-colours";
+import { getCategoryLabel } from "@/lib/news-categories";
+import { ChartCard } from "@/components/charts/chart-card";
+import { AssemblySeatsChart } from "@/components/charts/assembly-seats-chart";
+import { VotingActivityChart } from "@/components/charts/voting-activity-chart";
+import { PartyVotingChart } from "@/components/charts/party-voting-chart";
+import { NewsCategoriesChart } from "@/components/charts/news-categories-chart";
+import { ActiveMlasChart } from "@/components/charts/active-mlas-chart";
 
 export default async function HomePage() {
   const supabase = createServiceClient();
 
-  // Key stats
+  // === Key stats ===
   const [
     { count: mlaCount },
     { count: divisionCount },
@@ -23,21 +31,135 @@ export default async function HomePage() {
     supabase.from("party_donations").select("*", { count: "exact", head: true }),
   ]);
 
-  // Recent divisions
+  // === Analytics data ===
+
+  // Party seat counts
+  const { data: partySeats } = await supabase
+    .from("members")
+    .select("party")
+    .eq("active", true);
+
+  const seatsByParty = new Map<string, number>();
+  for (const m of partySeats ?? []) {
+    const p = m.party ?? "Independent";
+    seatsByParty.set(p, (seatsByParty.get(p) ?? 0) + 1);
+  }
+  const seatData = [...seatsByParty.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([party, count]) => ({
+      party,
+      short: getPartyShortName(party),
+      count,
+      color: getPartyHex(party),
+    }));
+
+  // Monthly division counts
+  const { data: rawDivisions } = await supabase
+    .from("divisions")
+    .select("date")
+    .order("date", { ascending: true });
+
+  const monthCounts = new Map<string, number>();
+  for (const d of rawDivisions ?? []) {
+    if (!d.date) continue;
+    const key = d.date.slice(0, 7); // YYYY-MM
+    monthCounts.set(key, (monthCounts.get(key) ?? 0) + 1);
+  }
+  const monthData = [...monthCounts.entries()].map(([month, count]) => ({
+    month,
+    label: new Date(month + "-01").toLocaleDateString("en-GB", { month: "short", year: "2-digit" }),
+    count,
+  }));
+
+  // Party voting patterns
+  const { data: rawVotes } = await supabase
+    .from("member_votes")
+    .select("vote, members!inner(party)")
+    .not("members.party", "is", null);
+
+  const partyVotes = new Map<string, { aye: number; no: number; abstained: number }>();
+  for (const v of (rawVotes ?? []) as unknown as { vote: string; members: { party: string } }[]) {
+    const party = v.members.party;
+    if (!partyVotes.has(party)) partyVotes.set(party, { aye: 0, no: 0, abstained: 0 });
+    const pv = partyVotes.get(party)!;
+    if (v.vote === "aye") pv.aye++;
+    else if (v.vote === "no") pv.no++;
+    else pv.abstained++;
+  }
+  const partyVoteData = [...partyVotes.entries()]
+    .sort((a, b) => (b[1].aye + b[1].no + b[1].abstained) - (a[1].aye + a[1].no + a[1].abstained))
+    .map(([party, votes]) => ({
+      party,
+      short: getPartyShortName(party),
+      ...votes,
+      color: getPartyHex(party),
+    }));
+
+  // News categories
+  const { data: rawCategories } = await supabase
+    .from("news_mentions")
+    .select("category")
+    .not("category", "is", null);
+
+  const catCounts = new Map<string, number>();
+  for (const n of rawCategories ?? []) {
+    if (!n.category) continue;
+    catCounts.set(n.category, (catCounts.get(n.category) ?? 0) + 1);
+  }
+  const categoryData = [...catCounts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, count]) => ({
+      category,
+      label: getCategoryLabel(category),
+      count,
+    }));
+
+  // Most active MLAs
+  const { data: rawActivity } = await supabase
+    .from("members")
+    .select("person_id, name, party, hansard_contributions(id), questions(id), member_votes(id)")
+    .eq("active", true);
+
+  const activityData = ((rawActivity ?? []) as unknown as {
+    person_id: string;
+    name: string;
+    party: string;
+    hansard_contributions: { id: string }[];
+    questions: { id: string }[];
+    member_votes: { id: string }[];
+  }[])
+    .map((m) => {
+      const hansard = m.hansard_contributions?.length ?? 0;
+      const questions = m.questions?.length ?? 0;
+      const votes = m.member_votes?.length ?? 0;
+      return {
+        personId: m.person_id,
+        name: m.name,
+        party: m.party,
+        partyShort: getPartyShortName(m.party),
+        color: getPartyHex(m.party),
+        hansard,
+        questions,
+        votes,
+        score: hansard + questions + votes,
+      };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
+
+  // === Recent activity (existing) ===
   const { data: recentDivisions } = await supabase
     .from("divisions")
     .select("division_id, title, date, outcome, ayes, noes")
     .order("date", { ascending: false })
     .limit(5);
 
-  // Recent Hansard
   const { data: recentHansard } = await supabase
     .from("hansard_contributions")
     .select("id, person_id, date, debate_title, content, members!inner(name)")
     .order("date", { ascending: false })
     .limit(5);
 
-  // Recent questions
   const { data: recentQuestions } = await supabase
     .from("questions")
     .select("id, person_id, date, question_text, department, question_type, members!inner(name)")
@@ -51,7 +173,6 @@ export default async function HomePage() {
     .order("completed_at", { ascending: false })
     .limit(10);
 
-  // Deduplicate to latest per source
   const latestSyncs = new Map<string, SyncLogLatest>();
   for (const log of syncLogs ?? []) {
     if (!latestSyncs.has(log.source)) {
@@ -91,8 +212,31 @@ export default async function HomePage() {
         ))}
       </div>
 
+      {/* Analytics charts */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <ChartCard title="Assembly Seats" subtitle="Current party representation">
+          <AssemblySeatsChart data={seatData} />
+        </ChartCard>
+
+        <ChartCard title="Voting Activity" subtitle="Divisions per month">
+          <VotingActivityChart data={monthData} />
+        </ChartCard>
+
+        <ChartCard title="Party Voting Patterns" subtitle="Aye / No / Abstain breakdown" className="sm:col-span-2">
+          <PartyVotingChart data={partyVoteData} />
+        </ChartCard>
+
+        <ChartCard title="News Coverage" subtitle="Articles by category">
+          <NewsCategoriesChart data={categoryData} />
+        </ChartCard>
+
+        <ChartCard title="Most Active MLAs" subtitle="Combined debate, questions & voting activity">
+          <ActiveMlasChart data={activityData} />
+        </ChartCard>
+      </div>
+
       {/* Sync status */}
-      <div className="mt-6">
+      <div className="mt-8">
         <h2 className="text-lg font-semibold mb-2">Sync Status</h2>
         <div className="flex flex-wrap gap-2">
           {[...latestSyncs.entries()].map(([source, log]) => (
@@ -114,6 +258,7 @@ export default async function HomePage() {
         </div>
       </div>
 
+      {/* Recent activity */}
       <div className="mt-8 grid gap-6 lg:grid-cols-2 min-w-0">
         {/* Recent Divisions */}
         <div className="min-w-0">
