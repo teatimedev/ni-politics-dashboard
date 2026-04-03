@@ -11,6 +11,7 @@ import {
   Newspaper,
   UsersRound,
   LayoutDashboard,
+  BarChart3,
   Menu,
   X,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/money", label: "Money & Interests", icon: Banknote },
   { href: "/news", label: "News", icon: Newspaper },
   { href: "/groups", label: "All-Party Groups", icon: UsersRound },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 function SidebarContent({
