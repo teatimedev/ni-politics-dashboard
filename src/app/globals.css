@@ -183,3 +183,12 @@
   box-shadow: 0 0 20px -5px oklch(0.82 0.12 75 / 10%);
   border-color: oklch(0.82 0.12 75 / 20%);
 }
+
+/* Hide scrollbar for chip filter rows */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
