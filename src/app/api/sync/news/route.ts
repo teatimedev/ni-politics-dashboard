@@ -29,8 +29,25 @@ interface RSSItem {
   title: string;
   link: string;
   description: string;
+  contentEncoded: string | null;
   pubDate: string;
   source: string;
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<!\[CDATA\[|\]\]>/g, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 async function fetchRSSItems(
@@ -41,7 +58,6 @@ async function fetchRSSItems(
   if (!response.ok) return [];
   const xml = await response.text();
 
-  // Simple XML parsing for RSS items
   const items: RSSItem[] = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/g;
   let match;
@@ -54,15 +70,15 @@ async function fetchRSSItems(
       itemXml.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? "";
     const pubDate =
       itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/)?.[1] ?? "";
+    const contentEncoded =
+      itemXml.match(/<content:encoded>([\s\S]*?)<\/content:encoded>/)?.[1] ?? null;
 
     if (title && link) {
       items.push({
-        title: title.replace(/<!\[CDATA\[|\]\]>/g, "").trim(),
+        title: stripHtml(title),
         link: link.trim(),
-        description: description
-          .replace(/<!\[CDATA\[|\]\]>/g, "")
-          .replace(/<[^>]*>/g, "")
-          .trim(),
+        description: stripHtml(description),
+        contentEncoded: contentEncoded ? stripHtml(contentEncoded) : null,
         pubDate,
         source,
       });
@@ -70,6 +86,32 @@ async function fetchRSSItems(
   }
 
   return items;
+}
+
+async function fetchArticleText(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": "StormontWatch/1.0 (NI politics dashboard)" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return null;
+    const html = await response.text();
+
+    // Try to extract article body from common selectors
+    const articleMatch =
+      html.match(/<article[^>]*>([\s\S]*?)<\/article>/i)?.[1] ??
+      html.match(/class="article-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ??
+      html.match(/class="ssrcss-[^"]*"[^>]*data-component="text-block"[^>]*>([\s\S]*?)<\/div>/gi)?.join("\n") ??
+      null;
+
+    if (!articleMatch) return null;
+
+    const text = stripHtml(articleMatch);
+    // Only return if we got a meaningful amount of text
+    return text.length > 100 ? text.slice(0, 5000) : null;
+  } catch {
+    return null;
+  }
 }
 
 const mlaQuoteSchema = z.object({
@@ -175,10 +217,20 @@ export async function GET(request: NextRequest) {
 
     // Process each new article (limit to 40 per sync to stay within Groq limits)
     for (const item of newItems.slice(0, 40)) {
+      // Get full article text: prefer content:encoded, then fetch from URL
+      const fullText =
+        item.contentEncoded ??
+        (await fetchArticleText(item.link));
+
+      // Use the best available text for LLM analysis
+      const textForLlm = fullText
+        ? fullText.slice(0, 3000)
+        : item.description;
+
       // Run LLM extraction
       const extraction = await extractMlaQuotes(
         item.title,
-        item.description,
+        textForLlm,
         mlaNames
       );
 
@@ -193,6 +245,7 @@ export async function GET(request: NextRequest) {
             ? new Date(item.pubDate).toISOString()
             : new Date().toISOString(),
           snippet: item.description.slice(0, 500),
+          full_text: fullText?.slice(0, 10000) ?? null,
           article_sentiment: extraction.article_sentiment,
         })
         .select("id")

@@ -75,6 +75,7 @@ export interface NewsArticleWithQuotes {
   url: string | null;
   date: string | null;
   snippet: string | null;
+  full_text: string | null;
   article_sentiment: number | null;
   news_mla_quotes: Array<{
     id: string;
