@@ -92,10 +92,10 @@ function CompareBar({
           <span className="text-muted-foreground"> / {avg} avg</span>
         </span>
       </div>
-      <div className="relative h-1.5 rounded-full bg-[oklch(1_0_0/4%)]">
+      <div className="relative h-2.5 rounded-full bg-[oklch(1_0_0/4%)]">
         {/* Average marker */}
         <div
-          className="absolute top-[-2px] h-[calc(100%+4px)] w-px bg-muted-foreground/40"
+          className="absolute top-[-1px] h-[calc(100%+2px)] w-px bg-muted-foreground/50"
           style={{ left: `${avgPct}%` }}
         />
         {/* Value bar */}

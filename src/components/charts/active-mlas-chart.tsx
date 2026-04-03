@@ -55,8 +55,13 @@ export function ActiveMlasChart({ data }: Props) {
                   }}
                 />
               </div>
-              <span className="text-[10px] tabular-nums text-muted-foreground w-16 text-right shrink-0">
-                {mla.hansard}d {mla.questions}q {mla.votes}v
+              <div className="text-[10px] tabular-nums text-muted-foreground text-right shrink-0 hidden sm:flex gap-2">
+                <span>{mla.hansard} debates</span>
+                <span>{mla.questions} Qs</span>
+                <span>{mla.votes} votes</span>
+              </div>
+              <span className="text-[10px] font-mono tabular-nums text-muted-foreground shrink-0 sm:hidden">
+                {mla.score}
               </span>
             </div>
           </div>

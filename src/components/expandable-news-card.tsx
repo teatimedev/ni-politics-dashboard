@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { getCategoryLabel } from "@/lib/news-categories";
+import { getCategoryLabel, getCategoryColor } from "@/lib/news-categories";
 
 interface NewsQuote {
   id: string;
@@ -65,12 +65,15 @@ export function ExpandableNewsCard({ article }: ExpandableNewsCardProps) {
               {article.source}
             </Badge>
             {article.category && (
-              <Badge
-                variant="secondary"
-                className="text-xs rounded-full bg-zinc-800 text-zinc-400"
+              <span
+                className="inline-flex items-center text-[10px] font-medium rounded-full px-2 py-0.5"
+                style={{
+                  backgroundColor: getCategoryColor(article.category) + "18",
+                  color: getCategoryColor(article.category),
+                }}
               >
                 {getCategoryLabel(article.category)}
-              </Badge>
+              </span>
             )}
             <span className="text-xs text-muted-foreground">
               {article.date
@@ -81,7 +84,7 @@ export function ExpandableNewsCard({ article }: ExpandableNewsCardProps) {
                   })
                 : ""}
             </span>
-            {article.article_sentiment !== null && (
+            {article.article_sentiment !== null && article.article_sentiment !== 0 && (
               <Badge
                 variant="secondary"
                 className={

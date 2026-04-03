@@ -21,15 +21,15 @@ function getHeatColor(pct: number): string {
 
 export function SimilarityHeatmap({ parties, matrix }: Props) {
   return (
-    <div className="overflow-x-auto scrollbar-hide">
-      <div className="min-w-[320px]">
+    <div className="overflow-x-auto scrollbar-hide max-w-lg mx-auto">
+      <div className="min-w-[280px]">
         {/* Header row */}
         <div className="flex">
           <div className="w-14 shrink-0" />
           {parties.map((p) => (
             <div
               key={p.short}
-              className="flex-1 min-w-[40px] text-center"
+              className="flex-1 min-w-[32px] text-center"
             >
               <span
                 className="text-[10px] font-bold"
@@ -59,7 +59,7 @@ export function SimilarityHeatmap({ parties, matrix }: Props) {
               return (
                 <div
                   key={colParty.short}
-                  className="flex-1 min-w-[40px] aspect-square flex items-center justify-center m-[1px] rounded-sm relative group"
+                  className="flex-1 min-w-[32px] aspect-square flex items-center justify-center m-[1px] rounded-sm relative group"
                   style={{
                     backgroundColor: isDiagonal
                       ? "oklch(1 0 0 / 3%)"

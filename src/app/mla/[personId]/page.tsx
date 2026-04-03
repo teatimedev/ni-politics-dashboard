@@ -11,6 +11,7 @@ import { VotingRecordTab } from "@/components/voting-record-tab";
 import { HansardContributionCard } from "@/components/hansard-contribution-card";
 import { InterestCard } from "@/components/interest-card";
 import { MlaScorecard } from "@/components/mla-scorecard";
+import { CollapsibleRoles } from "@/components/collapsible-roles";
 import type { Member, MemberRole, HansardContribution } from "@/lib/types";
 import type { VoteWithDivision, NewsQuoteWithArticle } from "@/lib/db-types";
 
@@ -243,26 +244,7 @@ export default async function MlaProfilePage({ params }: PageProps) {
 
       {/* Roles */}
       {Object.keys(rolesByType).length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-3">Roles</h2>
-          <div className="space-y-4">
-            {Object.entries(rolesByType).map(([type, typeRoles]) => (
-              <div key={type}>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                  {type}
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {typeRoles.map((role) => (
-                    <Badge key={role.id} variant="secondary">
-                      {role.role_name}
-                      {role.organisation ? ` — ${role.organisation}` : ""}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CollapsibleRoles rolesByType={rolesByType as any} />
       )}
 
       {/* Scorecard */}
