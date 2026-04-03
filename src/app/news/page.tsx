@@ -48,17 +48,17 @@ export default async function NewsPage({ searchParams }: PageProps) {
               key={article.id}
               className={`rounded-lg border border-border bg-card p-4 border-l-4 ${sentimentClass}`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 overflow-hidden">
                 <div className="flex-1 min-w-0">
                   <a
                     href={article.url ?? "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-lg font-semibold text-foreground hover:text-accent transition-colors"
+                    className="text-lg font-semibold text-foreground hover:text-accent transition-colors break-words"
                   >
                     {article.headline}
                   </a>
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="mt-1 flex items-center gap-2 flex-wrap">
                     <Badge variant="secondary" className="text-xs">
                       {article.source}
                     </Badge>

@@ -222,14 +222,14 @@ export default async function MlaProfilePage({ params }: PageProps) {
                   key={q.id}
                   className="rounded-lg border border-border bg-card p-4"
                 >
-                  <div className="mb-2 flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
+                  <div className="mb-2 flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className="text-xs shrink-0">
                       {q.question_type === "written" ? "Written" : "Oral"}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground truncate">
                       {q.department}
                     </span>
-                    <span className="text-xs text-muted-foreground ml-auto">
+                    <span className="text-xs text-muted-foreground ml-auto shrink-0">
                       {q.date}
                     </span>
                   </div>
@@ -254,13 +254,13 @@ export default async function MlaProfilePage({ params }: PageProps) {
                 return (
                   <div
                     key={q.id}
-                    className="rounded-lg border border-border bg-card p-4"
+                    className="rounded-lg border border-border bg-card p-4 overflow-hidden"
                   >
                     <a
                       href={article?.url ?? "#"}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-foreground hover:text-accent"
+                      className="font-medium text-foreground hover:text-accent break-words"
                     >
                       {article?.headline}
                     </a>

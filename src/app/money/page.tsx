@@ -200,14 +200,14 @@ async function PartyDonationsSection() {
               <p className="text-sm font-medium text-foreground">
                 {d.donor_name || "Anonymous"}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 {d.party} · {d.donation_type} · {d.donor_status}
               </p>
             </div>
-            <Badge variant="secondary" className="bg-amber-900/30 text-amber-400">
+            <Badge variant="secondary" className="bg-amber-900/30 text-amber-400 shrink-0">
               £{(d.amount ?? 0).toLocaleString("en-GB")}
             </Badge>
-            <span className="text-xs text-muted-foreground w-24 text-right">
+            <span className="text-xs text-muted-foreground shrink-0 text-right hidden sm:block w-24">
               {d.date_accepted}
             </span>
           </div>

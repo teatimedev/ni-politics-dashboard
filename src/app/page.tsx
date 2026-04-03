@@ -126,7 +126,7 @@ export default async function HomePage() {
               return (
                 <div
                   key={d.division_id}
-                  className="rounded-lg border border-border bg-card p-3"
+                  className="rounded-lg border border-border bg-card p-3 overflow-hidden"
                 >
                   <p className="text-sm font-medium text-foreground truncate">
                     {d.title}
@@ -156,7 +156,7 @@ export default async function HomePage() {
             {((recentHansard ?? []) as unknown as HansardWithMember[]).map((h) => (
               <div
                 key={h.id}
-                className="rounded-lg border border-border bg-card p-3"
+                className="rounded-lg border border-border bg-card p-3 overflow-hidden"
               >
                 <div className="flex items-center gap-2 mb-1">
                   <Link
@@ -170,7 +170,7 @@ export default async function HomePage() {
                   </span>
                 </div>
                 {h.debate_title && (
-                  <p className="text-xs text-muted-foreground mb-1">
+                  <p className="text-xs text-muted-foreground mb-1 truncate">
                     {h.debate_title}
                   </p>
                 )}
@@ -196,22 +196,22 @@ export default async function HomePage() {
           {((recentQuestions ?? []) as unknown as QuestionWithMember[]).map((q) => (
             <div
               key={q.id}
-              className="rounded-lg border border-border bg-card p-3"
+              className="rounded-lg border border-border bg-card p-3 overflow-hidden"
             >
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <Link
                   href={`/mla/${q.person_id}`}
                   className="text-sm font-medium text-accent hover:underline"
                 >
                   {q.members?.name}
                 </Link>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs shrink-0">
                   {q.question_type === "written" ? "Written" : "Oral"}
                 </Badge>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground truncate">
                   {q.department}
                 </span>
-                <span className="text-xs text-muted-foreground ml-auto">
+                <span className="text-xs text-muted-foreground ml-auto shrink-0">
                   {q.date}
                 </span>
               </div>
