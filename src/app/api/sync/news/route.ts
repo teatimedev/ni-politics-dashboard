@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { generateText, Output } from "ai";
-import { groq } from "@ai-sdk/groq";
+import { cerebras } from "@ai-sdk/cerebras";
 import { z } from "zod";
 import * as cheerio from "cheerio";
 import { CATEGORY_KEYS } from "@/lib/news-categories";
@@ -205,7 +205,7 @@ async function extractMlaQuotes(
 ) {
   try {
     const { output } = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: cerebras("qwen-3-235b-a22b-instruct-2507"),
       output: Output.object({ schema: mlaQuoteSchema }),
       prompt: `Analyze this Northern Ireland news article for quotes or statements by MLAs (Members of the Legislative Assembly).
 

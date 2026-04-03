@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/server";
 import { generateText, Output } from "ai";
-import { groq } from "@ai-sdk/groq";
+import { cerebras } from "@ai-sdk/cerebras";
 import { z } from "zod";
 import { CATEGORY_KEYS } from "@/lib/news-categories";
 
@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
 
   let processed = 0;
   let failed = 0;
+  const errors: string[] = [];
 
   // Process with delays for rate limiting
   for (let i = 0; i < articles.length; i++) {
@@ -48,12 +49,12 @@ export async function GET(request: NextRequest) {
 
     // 2-second delay between requests (except the first)
     if (i > 0) {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
 
     try {
       const { output } = await generateText({
-        model: groq("llama-3.3-70b-versatile"),
+        model: cerebras("qwen-3-235b-a22b-instruct-2507"),
         output: Output.object({ schema: categorySchema }),
         prompt: `Classify this Northern Ireland news article into exactly one category: health, economy, education, justice, infrastructure, assembly, legacy-identity, environment, or other. Pick the single best fit based on the primary topic.
 
@@ -69,9 +70,11 @@ Article text: ${(article.snippet ?? "").slice(0, 500)}`,
         processed++;
       } else {
         failed++;
+        if (errors.length < 3) errors.push(`No output for: ${article.headline}`);
       }
-    } catch {
+    } catch (e) {
       failed++;
+      if (errors.length < 3) errors.push(`${article.headline}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -80,5 +83,6 @@ Article text: ${(article.snippet ?? "").slice(0, 500)}`,
     total: articles.length,
     processed,
     failed,
+    errors,
   });
 }
