@@ -5,10 +5,12 @@ import { createServiceClient } from "@/lib/supabase/server";
 import {
   getPartyColourClass,
   getPartyShortName,
+  getPartyHex,
 } from "@/lib/party-colours";
 import { VotingRecordTab } from "@/components/voting-record-tab";
 import { HansardContributionCard } from "@/components/hansard-contribution-card";
 import { InterestCard } from "@/components/interest-card";
+import { MlaScorecard } from "@/components/mla-scorecard";
 import type { Member, MemberRole, HansardContribution } from "@/lib/types";
 import type { VoteWithDivision, NewsQuoteWithArticle } from "@/lib/db-types";
 
@@ -73,6 +75,117 @@ export default async function MlaProfilePage({ params }: PageProps) {
   const mla = member as Member;
   const mlaRoles = (roles ?? []) as MemberRole[];
   const hansardContributions = (hansardData ?? []) as HansardContribution[];
+
+  // === Scorecard data ===
+  const typedVotes = (votes ?? []) as unknown as VoteWithDivision[];
+
+  // Total divisions in the assembly
+  const { count: totalDivisions } = await supabase
+    .from("divisions")
+    .select("*", { count: "exact", head: true });
+
+  // Party loyalty: for each division this MLA voted in, find the party majority vote
+  const mlaVotesByDivision = new Map<string, string>();
+  for (const v of typedVotes) {
+    if (v.divisions?.division_id) {
+      mlaVotesByDivision.set(v.divisions.division_id, v.vote);
+    }
+  }
+
+  // Get all party members' votes for divisions this MLA participated in
+  const divisionIds = [...mlaVotesByDivision.keys()];
+  let loyaltyWithParty = 0;
+  let loyaltyTotal = 0;
+
+  if (divisionIds.length > 0 && mla.party) {
+    // Get party colleagues' votes
+    const { data: partyColleagues } = await supabase
+      .from("members")
+      .select("person_id")
+      .eq("party", mla.party)
+      .eq("active", true)
+      .neq("person_id", personId);
+
+    const colleagueIds = (partyColleagues ?? []).map((c) => c.person_id);
+
+    if (colleagueIds.length > 0) {
+      const { data: colleagueVotes } = await supabase
+        .from("member_votes")
+        .select("vote, divisions!inner(division_id)")
+        .in("person_id", colleagueIds)
+        .in("divisions.division_id", divisionIds.slice(0, 100));
+
+      // Calculate party majority per division
+      const divisionPartyVotes = new Map<string, Map<string, number>>();
+      for (const cv of (colleagueVotes ?? []) as unknown as { vote: string; divisions: { division_id: string } }[]) {
+        const did = cv.divisions.division_id;
+        if (!divisionPartyVotes.has(did)) divisionPartyVotes.set(did, new Map());
+        const counts = divisionPartyVotes.get(did)!;
+        counts.set(cv.vote, (counts.get(cv.vote) ?? 0) + 1);
+      }
+
+      for (const [did, mlaVote] of mlaVotesByDivision) {
+        const partyCounts = divisionPartyVotes.get(did);
+        if (!partyCounts) continue;
+        // Find majority vote
+        let majorityVote = "aye";
+        let majorityCount = 0;
+        for (const [vote, count] of partyCounts) {
+          if (count > majorityCount) {
+            majorityVote = vote;
+            majorityCount = count;
+          }
+        }
+        loyaltyTotal++;
+        if (mlaVote === majorityVote) loyaltyWithParty++;
+      }
+    }
+  }
+
+  // Activity rank — all MLAs sorted by combined activity
+  const { data: allMlaActivity } = await supabase
+    .from("members")
+    .select("person_id, hansard_contributions(id), questions(id), member_votes(id)")
+    .eq("active", true);
+
+  const activityScores = ((allMlaActivity ?? []) as unknown as {
+    person_id: string;
+    hansard_contributions: { id: string }[];
+    questions: { id: string }[];
+    member_votes: { id: string }[];
+  }[])
+    .map((m) => ({
+      personId: m.person_id,
+      score:
+        (m.hansard_contributions?.length ?? 0) +
+        (m.questions?.length ?? 0) +
+        (m.member_votes?.length ?? 0),
+      hansard: m.hansard_contributions?.length ?? 0,
+      questions: m.questions?.length ?? 0,
+      votes: m.member_votes?.length ?? 0,
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  const myActivity = activityScores.find((a) => a.personId === personId);
+  const myRank = activityScores.findIndex((a) => a.personId === personId) + 1;
+  const avgDebates = Math.round(
+    activityScores.reduce((s, a) => s + a.hansard, 0) / activityScores.length
+  );
+  const avgQuestions = Math.round(
+    activityScores.reduce((s, a) => s + a.questions, 0) / activityScores.length
+  );
+  const avgVotes = Math.round(
+    activityScores.reduce((s, a) => s + a.votes, 0) / activityScores.length
+  );
+
+  // News sentiment
+  const sentimentScores = ((newsQuotes ?? []) as unknown as NewsQuoteWithArticle[])
+    .filter((q) => q.sentiment_score !== null)
+    .map((q) => q.sentiment_score as number);
+  const avgSentiment =
+    sentimentScores.length > 0
+      ? sentimentScores.reduce((s, v) => s + v, 0) / sentimentScores.length
+      : 0;
 
   const memberInfo = {
     person_id: mla.person_id,
@@ -151,6 +264,36 @@ export default async function MlaProfilePage({ params }: PageProps) {
           </div>
         </div>
       )}
+
+      {/* Scorecard */}
+      <div className="mb-8">
+        <MlaScorecard
+          participation={{
+            attended: mlaVotesByDivision.size,
+            total: totalDivisions ?? 189,
+          }}
+          loyalty={{
+            withParty: loyaltyWithParty,
+            total: loyaltyTotal,
+          }}
+          activity={{
+            debates: myActivity?.hansard ?? 0,
+            questions: myActivity?.questions ?? 0,
+            votes: myActivity?.votes ?? 0,
+            avgDebates,
+            avgQuestions,
+            avgVotes,
+            rank: myRank || 1,
+            totalMlas: activityScores.length,
+          }}
+          sentiment={
+            sentimentScores.length > 0
+              ? { avg: avgSentiment, count: sentimentScores.length }
+              : null
+          }
+          partyColor={getPartyHex(mla.party)}
+        />
+      </div>
 
       {/* Tabs */}
       <Tabs defaultValue="voting" className="w-full">
