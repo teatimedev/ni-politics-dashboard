@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { generateText, Output } from "ai";
 import { groq } from "@ai-sdk/groq";
 import { z } from "zod";
+import * as cheerio from "cheerio";
 
 export const maxDuration = 120;
 
@@ -37,15 +38,32 @@ interface RSSItem {
 function stripHtml(html: string): string {
   return html
     .replace(/<!\[CDATA\[|\]\]>/g, "")
+    // Remove script/style/nav/header/footer blocks entirely
+    .replace(/<(script|style|nav|header|footer|aside|noscript)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    // Preserve line breaks
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, "\n\n")
+    .replace(/<li[^>]*>/gi, "- ")
+    // Remove all remaining tags
     .replace(/<[^>]*>/g, "")
+    // Decode HTML entities
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
+    .replace(/&#0?39;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#8216;|&#8217;/g, "'")
+    .replace(/&#8220;|&#8221;/g, '"')
+    .replace(/&#8211;/g, "–")
+    .replace(/&#8212;/g, "—")
+    .replace(/&#8230;/g, "...")
     .replace(/&nbsp;/g, " ")
+    .replace(/&#\d+;/g, "") // catch remaining numeric entities
+    .replace(/&\w+;/g, "") // catch remaining named entities
+    // Clean up whitespace
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n[ \t]+/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
@@ -88,6 +106,53 @@ async function fetchRSSItems(
   return items;
 }
 
+function extractWithCheerio(html: string, url: string): string | null {
+  const $ = cheerio.load(html);
+
+  // Remove noise elements across all sources
+  $("script, style, nav, header, footer, aside, noscript, iframe, svg, figure, figcaption, button, [role='navigation'], [role='banner'], .social-links, .share-tools, .related-articles").remove();
+
+  let paragraphs: string[] = [];
+
+  if (url.includes("bbc.com") || url.includes("bbc.co.uk")) {
+    // BBC: text blocks are marked with data-component="text-block"
+    $("[data-component='text-block'] p").each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 10) paragraphs.push(text);
+    });
+    // Fallback: article > p
+    if (paragraphs.length === 0) {
+      $("article p").each((_, el) => {
+        const text = $(el).text().trim();
+        if (text.length > 20) paragraphs.push(text);
+      });
+    }
+  } else if (url.includes("newsletter.co.uk")) {
+    // News Letter: article body paragraphs
+    $("article p, .article-body p, #article-body p").each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 20) paragraphs.push(text);
+    });
+  } else {
+    // Generic fallback
+    $("article p, .post-content p, .entry-content p, main p").each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 20) paragraphs.push(text);
+    });
+  }
+
+  // Filter out common junk lines
+  paragraphs = paragraphs.filter((p) =>
+    !p.match(/^(Share|Save|Copy link|Published|Updated|Sign up|Subscribe|Read more|Advertisement|Getty|PA|Reuters|Alamy)/i) &&
+    !p.match(/^\d+ (minutes?|hours?|days?) ago$/i) &&
+    !p.match(/^Image (source|caption)/i)
+  );
+
+  if (paragraphs.length < 2) return null;
+  const text = paragraphs.join("\n\n");
+  return text.length > 100 ? text : null;
+}
+
 async function fetchArticleText(url: string): Promise<string | null> {
   try {
     const response = await fetch(url, {
@@ -96,19 +161,8 @@ async function fetchArticleText(url: string): Promise<string | null> {
     });
     if (!response.ok) return null;
     const html = await response.text();
-
-    // Try to extract article body from common selectors
-    const articleMatch =
-      html.match(/<article[^>]*>([\s\S]*?)<\/article>/i)?.[1] ??
-      html.match(/class="article-body[^"]*"[^>]*>([\s\S]*?)<\/div>/i)?.[1] ??
-      html.match(/class="ssrcss-[^"]*"[^>]*data-component="text-block"[^>]*>([\s\S]*?)<\/div>/gi)?.join("\n") ??
-      null;
-
-    if (!articleMatch) return null;
-
-    const text = stripHtml(articleMatch);
-    // Only return if we got a meaningful amount of text
-    return text.length > 100 ? text.slice(0, 5000) : null;
+    const text = extractWithCheerio(html, url);
+    return text ? text.slice(0, 5000) : null;
   } catch {
     return null;
   }
